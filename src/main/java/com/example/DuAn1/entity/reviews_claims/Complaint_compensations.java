@@ -41,6 +41,6 @@ public class Complaint_compensations {
     private LocalTime resolved_at;
 
     @ManyToOne
-    @JoinColumn(name = "[complaint_id]",referencedColumnName = "[complaint_id]")
+    @JoinColumn(name = "[complaint_id]",referencedColumnName = "complaint_id")
     private Customer_complaints customer_complaints;
 }
