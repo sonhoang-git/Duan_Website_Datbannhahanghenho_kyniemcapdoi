@@ -665,3 +665,4 @@ SELECT ROW_NUMBER() OVER (ORDER BY name) AS STT, name AS Ten_Bang
 FROM sys.tables
 WHERE name <> 'sysdiagrams'
 ORDER BY name;
+--r
