@@ -71,6 +71,20 @@
     </dependencies>
 
     <build>
-
+        <!-- Thêm finalName để file war xuất ra ngắn gọn là DuAn1.war -->
+        <finalName>DuAn1</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <!-- Đảm bảo cấu trúc thư mục của bạn có src/main/webapp chứa WEB-INF -->
+                    <warSourceDirectory>src/main/webapp</warSourceDirectory>
+                    <!-- Tùy chọn này giúp bỏ qua lỗi nếu thiếu file web.xml (Servlet 3.0+) -->
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>
