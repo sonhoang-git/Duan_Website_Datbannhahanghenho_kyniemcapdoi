@@ -1,0 +1,668 @@
+-- ============================================================================
+-- DATABASE CREATION: WEBSITE ĐẶT BÀN NHÀ HÀNG HẸN HÒ & KỶ NIỆM CẶP ĐÔI (52 TABLES)
+-- Target RDBMS: SQL Server 2016+ / Azure SQL Database
+-- ============================================================================
+
+CREATE DATABASE [RomanticDiningStore];
+GO
+
+USE [RomanticDiningStore];
+GO
+
+-- ============================================================================
+-- PHÂN HỆ 1: NGƯỜI DÙNG, SỞ THÍCH & KỶ NIỆM CẶP ĐÔI (USER & ANNIVERSARY) - 6 BẢNG
+-- ============================================================================
+
+-- 1. Bảng người dùng chung (Khách hàng & Nhân viên)
+CREATE TABLE [users] (
+    [user_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [email] NVARCHAR(255) NOT NULL UNIQUE,
+    [phone_number] VARCHAR(20) NULL UNIQUE,
+    [password_hash] NVARCHAR(255) NOT NULL,
+    [full_name] NVARCHAR(100) NOT NULL,
+    [avatar_url] NVARCHAR(500) NULL,
+    [dob] DATE NULL,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK ([status] IN ('ACTIVE', 'INACTIVE', 'LOCKED')),
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [updated_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 2. Xác thực OTP Email / SĐT
+CREATE TABLE [user_verifications] (
+    [verification_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [type] NVARCHAR(20) NOT NULL CHECK ([type] IN ('EMAIL', 'PHONE', 'RECOVERY')),
+    [code] VARCHAR(10) NOT NULL,
+    [expires_at] DATETIME2 NOT NULL,
+    [is_verified] BIT NOT NULL DEFAULT 0
+);
+
+-- 3. Thông tin ngày kỷ niệm cặp đôi (Ngày yêu, Ngày cưới...)
+CREATE TABLE [couple_anniversaries] (
+    [anniversary_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [partner_name] NVARCHAR(100) NOT NULL,
+    [partner_dob] DATE NULL,
+    [anniversary_type] NVARCHAR(50) NOT NULL, -- DATING_DATE, WEDDING_DATE, FIRST_DATE...
+    [anniversary_date] DATE NOT NULL,
+    [notes] NVARCHAR(255) NULL
+);
+
+-- 4. Thông tin sở thích người đi cùng (Phục vụ tư vấn cá nhân hóa)
+CREATE TABLE [partner_preferences] (
+    [preference_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [favorite_flower] NVARCHAR(100) NULL,
+    [favorite_color] NVARCHAR(50) NULL,
+    [favorite_music_genre] NVARCHAR(100) NULL,
+    [favorite_cuisine] NVARCHAR(100) NULL,
+    [allergies] NVARCHAR(255) NULL
+);
+
+-- 5. Vai trò hệ thống
+CREATE TABLE [roles] (
+    [role_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [role_code] VARCHAR(50) NOT NULL UNIQUE, -- ADMIN, RECEPTIONIST, SERVICE_STAFF, DECOR_STAFF, CHEF, CASHIER, EVENT_COORDINATOR
+    [role_name] NVARCHAR(100) NOT NULL,
+    [description] NVARCHAR(255) NULL
+);
+
+-- 6. Gán vai trò cho người dùng
+CREATE TABLE [user_roles] (
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [role_id] INT NOT NULL FOREIGN KEY REFERENCES [roles]([role_id]) ON DELETE CASCADE,
+    [assigned_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    PRIMARY KEY ([user_id], [role_id])
+);
+
+-- ============================================================================
+-- PHÂN HỆ 2: DANH MỤC NHÀ HÀNG & KHÔNG GIAN (RESTAURANT MASTER) - 5 BẢNG
+-- ============================================================================
+
+-- 7. Danh mục Nhà hàng
+CREATE TABLE [restaurants] (
+    [restaurant_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_name] NVARCHAR(150) NOT NULL,
+    [phone] VARCHAR(20) NOT NULL,
+    [email] NVARCHAR(255) NULL,
+    [address] NVARCHAR(255) NOT NULL,
+    [district] NVARCHAR(100) NOT NULL,
+    [city] NVARCHAR(100) NOT NULL,
+    [latitude] DECIMAL(9,6) NULL,
+    [longitude] DECIMAL(9,6) NULL,
+    [cuisine_type] NVARCHAR(100) NOT NULL, -- European, French, Italian, Korean, Fusion...
+    [avg_price_per_couple] DECIMAL(18,2) NOT NULL,
+    [romantic_rating] DECIMAL(3,2) DEFAULT 5.00,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+);
+
+-- 8. Hình ảnh & Video không gian nhà hàng
+CREATE TABLE [restaurant_media] (
+    [media_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [media_type] VARCHAR(10) NOT NULL CHECK ([media_type] IN ('IMAGE', 'VIDEO')),
+    [media_url] NVARCHAR(500) NOT NULL,
+    [caption] NVARCHAR(255) NULL,
+    [is_featured] BIT NOT NULL DEFAULT 0
+);
+
+-- 9. Nhà hàng yêu thích của khách
+CREATE TABLE [user_favorite_restaurants] (
+    [favorite_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [UQ_user_restaurant_fav] UNIQUE([user_id], [restaurant_id])
+);
+
+-- 10. Chính sách nhà hàng (Đặt bàn, Hủy & Hoàn tiền)
+CREATE TABLE [restaurant_policies] (
+    [policy_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [cancellation_lead_hours] INT NOT NULL DEFAULT 24, -- Hủy trước bao nhiêu tiếng
+    [refund_percentage] DECIMAL(5,2) NOT NULL DEFAULT 100.00,
+    [deposit_requirement_percent] DECIMAL(5,2) NOT NULL DEFAULT 30.00,
+    [max_hold_time_minutes] INT DEFAULT 15,
+    [policy_terms] NVARCHAR(MAX) NULL
+);
+
+-- 11. Bảng giá dịch vụ và phụ phí của nhà hàng
+CREATE TABLE [restaurant_service_fees] (
+    [fee_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [fee_name] NVARCHAR(100) NOT NULL, -- Private Room Fee, Photography Fee, Surcharge Peak Hours...
+    [amount] DECIMAL(18,2) NOT NULL,
+    [is_percentage] BIT NOT NULL DEFAULT 0
+);
+
+-- ============================================================================
+-- PHÂN HỆ 3: SƠ ĐỒ BÀN & TRẠNG THÁI KHUNG GIỜ (TABLE & SLOTS) - 5 BẢNG
+-- ============================================================================
+
+-- 12. Khu vực không gian trong nhà hàng (Phòng riêng, Ban công, Sân vườn...)
+CREATE TABLE [restaurant_areas] (
+    [area_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [area_name] NVARCHAR(100) NOT NULL, -- Private Room, Balcony City View, Garden, Window Side
+    [privacy_level] NVARCHAR(30) NOT NULL CHECK ([privacy_level] IN ('STANDARD', 'HIGH', 'EXCLUSIVE_PRIVATE')),
+    [description] NVARCHAR(255) NULL
+);
+
+-- 13. Danh mục Bàn ăn & Vị trí chi tiết
+CREATE TABLE [tables] (
+    [table_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [area_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurant_areas]([area_id]) ON DELETE CASCADE,
+    [table_number] VARCHAR(20) NOT NULL,
+    [capacity] INT NOT NULL DEFAULT 2, -- Mặc định bàn dành cho 2 người
+    [is_window_side] BIT NOT NULL DEFAULT 0,
+    [has_city_view] BIT NOT NULL DEFAULT 0,
+    [has_curtain_divider] BIT NOT NULL DEFAULT 0, -- Vách ngăn / Rèm riêng tư
+    [is_quiet_zone] BIT NOT NULL DEFAULT 1,
+    [surcharge] DECIMAL(18,2) DEFAULT 0,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'AVAILABLE'
+);
+
+-- 14. Hình ảnh thực tế vị trí góc bàn
+CREATE TABLE [table_photos] (
+    [photo_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [table_id] INT NOT NULL FOREIGN KEY REFERENCES [tables]([table_id]) ON DELETE CASCADE,
+    [photo_url] NVARCHAR(500) NOT NULL
+);
+
+-- 15. Ca phục vụ / Khung giờ đặt bàn
+CREATE TABLE [time_slots] (
+    [slot_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [slot_name] NVARCHAR(50) NOT NULL, -- Lunch 11:30-13:30, Sunset 17:00-19:00, Candlelight 19:30-21:30
+    [start_time] TIME NOT NULL,
+    [end_time] TIME NOT NULL,
+    [slot_surcharge] DECIMAL(18,2) DEFAULT 0
+);
+
+-- 16. Lịch trạng thái bàn theo ngày & khung giờ
+CREATE TABLE [table_availability_slots] (
+    [availability_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [table_id] INT NOT NULL FOREIGN KEY REFERENCES [tables]([table_id]) ON DELETE CASCADE,
+    [slot_id] INT NOT NULL FOREIGN KEY REFERENCES [time_slots]([slot_id]),
+    [booking_date] DATE NOT NULL,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'AVAILABLE'
+        CHECK ([status] IN ('AVAILABLE', 'HOLD_TEMPORARY', 'BOOKED', 'BLOCKED')),
+    [hold_expires_at] DATETIME2 NULL,
+    CONSTRAINT [UQ_table_slot_date] UNIQUE([table_id], [slot_id], [booking_date])
+);
+
+-- ============================================================================
+-- PHÂN HỆ 4: CHỦ ĐỀ HẸN HÒ & DỊCH VỤ TRANG TRÍ (THEMES & DECOR) - 5 BẢNG
+-- ============================================================================
+
+-- 17. Danh mục Chủ đề hẹn hò (Valentine, Cầu hôn, Kỷ niệm ngày yêu...)
+CREATE TABLE [romantic_themes] (
+    [theme_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [theme_code] VARCHAR(50) NOT NULL UNIQUE,
+    [theme_name] NVARCHAR(100) NOT NULL, -- Korean Romantic, European Classic, Minimalist, Luxury
+    [description] NVARCHAR(MAX) NULL,
+    [base_price] DECIMAL(18,2) NOT NULL DEFAULT 0
+);
+
+-- 18. Hình ảnh mẫu trang trí theo chủ đề
+CREATE TABLE [theme_gallery] (
+    [gallery_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [theme_id] INT NOT NULL FOREIGN KEY REFERENCES [romantic_themes]([theme_id]) ON DELETE CASCADE,
+    [image_url] NVARCHAR(500) NOT NULL,
+    [color_tone] NVARCHAR(50) NULL -- Pink, Red Rose, Warm Yellow, White Elegance
+);
+
+-- 19. Danh mục dịch vụ trang trí chi tiết (Hoa tươi, Nến, Bóng bay, LED...)
+CREATE TABLE [decor_services] (
+    [service_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [service_code] VARCHAR(50) NOT NULL UNIQUE,
+    [service_name] NVARCHAR(100) NOT NULL, -- Fresh Rose Setup, LED Lights Path, Photo Frame Banner...
+    [category] NVARCHAR(50) NOT NULL, -- FLOWER, CANDLE, BALLOON, LIGHTING, PHOTO_FRAME, BANNER
+    [unit_price] DECIMAL(18,2) NOT NULL
+);
+
+-- 20. Yêu cầu trang trí cá nhân hóa cho đơn đặt bàn
+CREATE TABLE [booking_decor_requests] (
+    [decor_request_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [theme_id] INT NULL FOREIGN KEY REFERENCES [romantic_themes]([theme_id]),
+    [color_tone] NVARCHAR(50) NULL,
+    [table_style] NVARCHAR(100) NULL,
+    [custom_text_content] NVARCHAR(255) NULL, -- Lời chúc trên bảng tên / banner
+    [custom_uploaded_photo_url] NVARCHAR(500) NULL,
+    [keep_secret] BIT NOT NULL DEFAULT 1, -- Giữ bí mật với người đi cùng
+    [setup_deadline_time] TIME NULL,
+    [custom_design_proof_url] NVARCHAR(500) NULL, -- Ảnh mẫu duyệt cuối
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK ([status] IN ('PENDING', 'APPROVED', 'REJECTED'))
+);
+
+-- 21. Chi tiết các mục trang trí chọn kèm
+CREATE TABLE [booking_decor_details] (
+    [detail_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [decor_request_id] INT NOT NULL FOREIGN KEY REFERENCES [booking_decor_requests]([decor_request_id]) ON DELETE CASCADE,
+    [service_id] INT NOT NULL FOREIGN KEY REFERENCES [decor_services]([service_id]),
+    [quantity] INT NOT NULL DEFAULT 1,
+    [unit_price] DECIMAL(18,2) NOT NULL
+);
+
+-- ============================================================================
+-- PHÂN HỆ 5: BÁNH SỰ KIỆN & HOA/QUÀ TẶNG (CAKES & GIFTS) - 4 BẢNG
+-- ============================================================================
+
+-- 22. Danh mục Bánh sinh nhật / Kỷ niệm
+CREATE TABLE [cake_catalog] (
+    [cake_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [cake_name] NVARCHAR(100) NOT NULL,
+    [category] NVARCHAR(50) NOT NULL, -- BIRTHDAY, ANNIVERSARY, VALENTINE, CUSTOM
+    [flavor] NVARCHAR(100) NOT NULL, -- Chocolate, Red Velvet, Tiramisu, Strawberry
+    [size] NVARCHAR(50) NOT NULL, -- 14cm, 16cm, 18cm, 2 tầng
+    [base_price] DECIMAL(18,2) NOT NULL,
+    [image_url] NVARCHAR(500) NULL
+);
+
+-- 23. Đặt bánh thiết riêng theo yêu cầu trong Đơn đặt bàn
+CREATE TABLE [booking_cake_orders] (
+    [cake_order_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [cake_id] INT NOT NULL FOREIGN KEY REFERENCES [cake_catalog]([cake_id]),
+    [custom_written_text] NVARCHAR(100) NULL, -- Chữ trên bánh
+    [reference_image_url] NVARCHAR(500) NULL,
+    [candle_type] NVARCHAR(50) NULL,
+    [surprise_serving_time] TIME NULL, -- Thời điểm mang bánh ra bất ngờ
+    [price] DECIMAL(18,2) NOT NULL
+);
+
+-- 24. Danh mục Hoa tươi & Quà tặng
+CREATE TABLE [gift_catalog] (
+    [gift_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [gift_name] NVARCHAR(150) NOT NULL,
+    [category] NVARCHAR(50) NOT NULL, -- FLOWER_BOUQUET, ROSE_BOX, GIFT_BOX, CARD
+    [description] NVARCHAR(255) NULL,
+    [price] DECIMAL(18,2) NOT NULL,
+    [image_url] NVARCHAR(500) NULL
+);
+
+-- 25. Đặt hoa & quà kèm thiệp chúc mừng
+CREATE TABLE [booking_gift_orders] (
+    [gift_order_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [gift_id] INT NOT NULL FOREIGN KEY REFERENCES [gift_catalog]([gift_id]),
+    [card_message_content] NVARCHAR(MAX) NULL, -- Nội dung viết thiệp
+    [delivery_time_spot] TIME NULL, -- Thời điểm trao quà
+    [price] DECIMAL(18,2) NOT NULL
+);
+
+-- ============================================================================
+-- PHÂN HỆ 6: THỰC ĐƠN, COMBO & CHẾ ĐỘ ĂN/DỊCH ỨNG (MENU & COMBOS) - 5 BẢNG
+-- ============================================================================
+
+-- 26. Bảng Món ăn lẻ (Menu nhà hàng)
+CREATE TABLE [menu_items] (
+    [item_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [item_name] NVARCHAR(150) NOT NULL,
+    [category] NVARCHAR(50) NOT NULL, -- APPETIZER, MAIN_COURSE, DESSERT, DRINK, WINE
+    [unit_price] DECIMAL(18,2) NOT NULL,
+    [image_url] NVARCHAR(500) NULL,
+    [is_vegetarian] BIT NOT NULL DEFAULT 0,
+    [allergen_ingredients] NVARCHAR(255) NULL, -- Thành phần dễ gây dị ứng (Hải sản, Đậu phộng, Sữa...)
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' CHECK ([status] IN ('AVAILABLE', 'OUT_OF_STOCK', 'DISCONTINUED'))
+);
+
+-- 27. Danh mục Combo dành cho Cặp đôi (Hỗ trợ giá gốc & giá ưu đãi theo dịp / khung giờ)
+CREATE TABLE [couple_combos] (
+    [combo_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]) ON DELETE CASCADE,
+    [combo_name] NVARCHAR(150) NOT NULL, -- Save Date Combo, Premium Romantic Night, Proposal Feast
+    [combo_type] NVARCHAR(50) NOT NULL,
+    [total_items_count] INT NOT NULL,
+    [combo_price] DECIMAL(18,2) NOT NULL,
+    [promotional_price] DECIMAL(18,2) NULL,
+    [occasion_tag] NVARCHAR(100) NULL, -- Valentine, Cầu hôn, Kỷ niệm, Cuối tuần
+    [applicable_slot_id] INT NULL FOREIGN KEY REFERENCES [time_slots]([slot_id]),
+    [promo_start_date] DATE NULL,
+    [promo_end_date] DATE NULL,
+    [image_url] NVARCHAR(500) NULL,
+    [description] NVARCHAR(MAX) NULL,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK ([status] IN ('ACTIVE', 'INACTIVE'))
+);
+
+-- 28. Chi tiết các món trong Combo
+CREATE TABLE [combo_details] (
+    [combo_detail_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [combo_id] INT NOT NULL FOREIGN KEY REFERENCES [couple_combos]([combo_id]) ON DELETE CASCADE,
+    [item_id] INT NOT NULL FOREIGN KEY REFERENCES [menu_items]([item_id]),
+    [quantity] INT NOT NULL DEFAULT 1,
+    [is_optional_swap] BIT NOT NULL DEFAULT 0 -- Cho phép đổi món hay không
+);
+-- 28B. Danh sách Combo & Món ăn yêu thích của khách hàng (Lưu cho lần hẹn sau)
+CREATE TABLE [user_favorite_menu_items] (
+    [fav_menu_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE CASCADE,
+    [combo_id] INT NULL FOREIGN KEY REFERENCES [couple_combos]([combo_id]),
+    [item_id] INT NULL FOREIGN KEY REFERENCES [menu_items]([item_id]),
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT CHK_Fav_ComboOrItem CHECK (
+        ([combo_id] IS NOT NULL AND [item_id] IS NULL) OR
+        ([combo_id] IS NULL AND [item_id] IS NOT NULL)
+    )
+);
+
+-- 29. Đặt món ăn / Combo theo Đơn đặt bàn
+CREATE TABLE [booking_menu_orders] (
+    [menu_order_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [combo_id] INT NULL FOREIGN KEY REFERENCES [couple_combos]([combo_id]),
+    [serving_schedule_note] NVARCHAR(255) NULL, -- Yêu cầu phục vụ món theo thời điểm
+    [total_menu_price] DECIMAL(18,2) NOT NULL
+);
+-- 29B. Chi tiết từng món ăn trong đơn (Lưu món trong Combo đã chốt, món đổi thay thế & món gọi thêm ngoài Combo)
+CREATE TABLE [booking_menu_item_details] (
+    [menu_item_detail_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [menu_order_id] INT NOT NULL FOREIGN KEY REFERENCES [booking_menu_orders]([menu_order_id]) ON DELETE CASCADE,
+    [item_id] INT NOT NULL FOREIGN KEY REFERENCES [menu_items]([item_id]),
+    [quantity] INT NOT NULL DEFAULT 1 CHECK ([quantity] > 0),
+    [unit_price] DECIMAL(18,2) NOT NULL,
+    [item_source] VARCHAR(20) NOT NULL DEFAULT 'COMBO_DEFAULT'
+        CHECK ([item_source] IN ('COMBO_DEFAULT', 'COMBO_SWAPPED', 'EXTRA_ITEM')),
+    [serving_time_note] NVARCHAR(100) NULL, -- Lên món khai vị trước, lên cùng món chính...
+    [prep_status] VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK ([prep_status] IN ('PENDING', 'PREPARING', 'COMPLETED'))
+);
+
+-- 30. Khai báo Dị ứng & Điều chỉnh khẩu vị món ăn
+CREATE TABLE [booking_dietary_requirements] (
+    [dietary_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [menu_order_id] INT NOT NULL FOREIGN KEY REFERENCES [booking_menu_orders]([menu_order_id]) ON DELETE CASCADE,
+    [food_allergies] NVARCHAR(255) NULL, -- Dị ứng hải sản, đậu phộng...
+    [is_vegetarian] BIT NOT NULL DEFAULT 0,
+    [excluded_ingredients] NVARCHAR(255) NULL, -- Không hành, không tiêu...
+    [seasoning_request] NVARCHAR(255) NULL -- Ít muối, cay vừa...
+);
+
+-- ============================================================================
+-- PHÂN HỆ 7: KỊCH BẢN BẤT NGỜ, NHẠC/VIDEO & CẦU HÔN (SURPRISES) - 4 BẢNG
+-- ============================================================================
+
+-- 31. Yêu cầu kịch bản tạo bất ngờ cho buổi hẹn
+CREATE TABLE [surprise_scripts] (
+    [script_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [script_title] NVARCHAR(150) NOT NULL, -- Màn Cầu hôn Hoàng gia, Tỏ tình Ánh nến, Chúc mừng Bí mật
+    [script_type] NVARCHAR(50) NOT NULL, -- PROPOSAL, CONFESSION, SURPRISE_PARTY
+    [step_by_step_instructions] NVARCHAR(MAX) NOT NULL, -- Hướng dẫn từng bước cho nhân viên
+    [staff_coordination_note] NVARCHAR(MAX) NULL
+);
+
+-- 32. Yêu cầu phát Nhạc / Video kỷ niệm riêng
+CREATE TABLE [booking_media_requests] (
+    [media_req_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [song_title] NVARCHAR(150) NULL,
+    [artist_name] NVARCHAR(100) NULL,
+    [custom_video_url] NVARCHAR(500) NULL, -- Video kỷ niệm tải lên
+    [play_time_spot] TIME NULL, -- Thời điểm phát nhạc/video
+    [use_projector] BIT NOT NULL DEFAULT 0
+);
+
+-- 33. Đặt dịch vụ Chụp ảnh / Quay phim chuyên nghiệp
+CREATE TABLE [booking_photography_services] (
+    [photo_service_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [service_type] NVARCHAR(50) NOT NULL CHECK ([service_type] IN ('STAFF_TAKE_PHOTO', 'PRO_PHOTOGRAPHER', 'PRO_VIDEOGRAPHER')),
+    [duration_minutes] INT DEFAULT 30,
+    [fee] DECIMAL(18,2) DEFAULT 0
+);
+
+-- 34. Kịch bản bất ngờ đăng ký theo Đơn đặt bàn
+CREATE TABLE [booking_surprise_executions] (
+    [execution_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [script_id] INT NULL FOREIGN KEY REFERENCES [surprise_scripts]([script_id]),
+    [media_req_id] INT NULL FOREIGN KEY REFERENCES [booking_media_requests]([media_req_id]),
+    [photo_service_id] INT NULL FOREIGN KEY REFERENCES [booking_photography_services]([photo_service_id]),
+    [secret_passcode] VARCHAR(20) NULL, -- Mã bảo mật kịch bản
+    [is_approved_by_restaurant] BIT NOT NULL DEFAULT 0
+);
+
+-- ============================================================================
+-- PHÂN HỆ 8: ĐẶT BÀN, THANH TOÁN CỌC & VOUCHER (BOOKINGS & PAYMENTS) - 6 BẢNG
+-- ============================================================================
+
+-- 35. Mã giảm giá / Ưu đãi cặp đôi
+CREATE TABLE [coupons] (
+    [coupon_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [code] VARCHAR(50) NOT NULL UNIQUE,
+    [discount_type] VARCHAR(10) NOT NULL CHECK ([discount_type] IN ('PERCENT', 'FIXED')),
+    [discount_value] DECIMAL(18,2) NOT NULL,
+    [min_order_value] DECIMAL(18,2) DEFAULT 0,
+    [start_date] DATETIME2 NOT NULL,
+    [end_date] DATETIME2 NOT NULL,
+    [usage_limit] INT DEFAULT 100
+);
+
+-- 36. Đơn Đặt bàn chính (Master Booking)
+CREATE TABLE [bookings] (
+    [booking_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_code] VARCHAR(50) NOT NULL UNIQUE,
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]),
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]),
+    [table_id] INT NOT NULL FOREIGN KEY REFERENCES [tables]([table_id]),
+    [slot_id] INT NOT NULL FOREIGN KEY REFERENCES [time_slots]([slot_id]),
+    [booking_date] DATE NOT NULL,
+    [guest_count] INT NOT NULL DEFAULT 2,
+    [duration_hours] DECIMAL(3,1) DEFAULT 2.0,
+    [booker_name] NVARCHAR(100) NOT NULL,
+    [booker_phone] VARCHAR(20) NOT NULL,
+    [partner_name] NVARCHAR(100) NULL,
+    [special_notes] NVARCHAR(MAX) NULL,
+    [booking_status] NVARCHAR(30) NOT NULL DEFAULT 'PENDING'
+        CHECK ([booking_status] IN ('PENDING', 'CONFIRMED', 'ARRIVED', 'COMPLETED', 'CANCELLED')),
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 37. Liên kết Chi tiết Đơn đặt bàn với các Phân hệ dịch vụ
+CREATE TABLE [booking_service_links] (
+    [link_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL UNIQUE FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [decor_request_id] INT NULL FOREIGN KEY REFERENCES [booking_decor_requests]([decor_request_id]),
+    [cake_order_id] INT NULL FOREIGN KEY REFERENCES [booking_cake_orders]([cake_order_id]),
+	[gift_order_id] INT NULL FOREIGN KEY REFERENCES [booking_gift_orders]([gift_order_id]),
+    [menu_order_id] INT NULL FOREIGN KEY REFERENCES [booking_menu_orders]([menu_order_id]),
+    [surprise_execution_id] INT NULL FOREIGN KEY REFERENCES [booking_surprise_executions]([execution_id])
+);
+
+-- 38. Tổng hợp chi phí đơn đặt bàn
+CREATE TABLE [booking_bill_summaries] (
+    [bill_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL UNIQUE FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [table_surcharge] DECIMAL(18,2) DEFAULT 0,
+    [decor_cost] DECIMAL(18,2) DEFAULT 0,
+    [cake_cost] DECIMAL(18,2) DEFAULT 0,
+    [gift_cost] DECIMAL(18,2) DEFAULT 0,
+    [menu_cost] DECIMAL(18,2) DEFAULT 0,
+    [photography_cost] DECIMAL(18,2) DEFAULT 0,
+    [discount_amount] DECIMAL(18,2) DEFAULT 0,
+    [total_amount] DECIMAL(18,2) NOT NULL,
+    [deposit_amount] DECIMAL(18,2) NOT NULL,
+    [remaining_amount] DECIMAL(18,2) NOT NULL
+);
+
+-- 39. Nhật ký Thanh toán (Đặt cọc / Thanh toán trước / Tại nhà hàng)
+CREATE TABLE [booking_payments] (
+    [payment_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [payment_type] VARCHAR(20) NOT NULL CHECK ([payment_type] IN ('DEPOSIT', 'FULL_PREPAY', 'REMAINING_AT_STORE')),
+    [payment_method] VARCHAR(20) NOT NULL CHECK ([payment_method] IN ('VNPAY', 'ZALOPAY', 'MOMO', 'CREDIT_CARD', 'CASH')),
+    [transaction_code] VARCHAR(100) NULL,
+    [amount] DECIMAL(18,2) NOT NULL,
+    [payment_status] VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK ([payment_status] IN ('PENDING', 'PAID', 'FAILED')),
+    [paid_at] DATETIME2 NULL
+);
+
+-- 40. Xử lý Hủy đặt bàn & Hoàn tiền cọc
+CREATE TABLE [booking_refunds] (
+    [refund_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]),
+    [cancellation_reason] NVARCHAR(255) NULL,
+    [cancellation_fee] DECIMAL(18,2) NOT NULL,
+    [refund_amount] DECIMAL(18,2) NOT NULL,
+    [refund_status] NVARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK ([refund_status] IN ('PENDING', 'PROCESSED', 'REJECTED')),
+    [processed_at] DATETIME2 NULL
+);
+
+-- ============================================================================
+-- PHÂN HỆ 9: PHÂN CÔNG NHÂN VIÊN & CHUẨN BỊ SỰ KIỆN (EXECUTION) - 4 BẢNG
+-- ============================================================================
+
+-- 41. Phân công nhân viên phụ trách buổi hẹn
+CREATE TABLE [event_staff_assignments] (
+    [assignment_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]),
+    [staff_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]),
+    [assigned_role] NVARCHAR(50) NOT NULL, -- TABLE_SERVER, DECORATOR, CHEF, PHOTOGRAPHER, EVENT_LEAD
+    [assigned_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 42. Danh mục các hạng mục cần chuẩn bị trước giờ hẹn
+CREATE TABLE [event_prep_checklists] (
+    [checklist_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [item_name] NVARCHAR(150) NOT NULL, -- Confirm Table Position, Decor Ready, Cake Ready, Flower Ready, Sound Test
+    [is_completed] BIT NOT NULL DEFAULT 0,
+    [completed_at] DATETIME2 NULL,
+    [completed_by_staff_id] INT NULL FOREIGN KEY REFERENCES [users]([user_id])
+);
+
+-- 43. Hình ảnh nghiệm thu không gian bàn sau khi trang trí xong
+CREATE TABLE [event_setup_proof_photos] (
+    [proof_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [photo_url] NVARCHAR(500) NOT NULL,
+    [uploaded_at] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [sent_to_customer] BIT NOT NULL DEFAULT 0
+);
+
+-- 44. Nhật ký tiến độ chuẩn bị sự kiện (Live Timeline)
+CREATE TABLE [event_progress_logs] (
+    [log_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]) ON DELETE CASCADE,
+    [status_step] NVARCHAR(100) NOT NULL, -- DECORATING, CAKE_ARRIVED, SOUND_TESTED, TABLE_READY
+    [note] NVARCHAR(255) NULL,
+    [logged_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- ============================================================================
+-- PHÂN HỆ 10: ĐÁNH GIÁ, KHIẾU NẠI & BỒI HOÀN (REVIEWS & CLAIMS) - 4 BẢNG
+-- ============================================================================
+
+-- 45. Đánh giá trải nghiệm buổi hẹn hò
+CREATE TABLE [booking_reviews] (
+    [review_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL UNIQUE FOREIGN KEY REFERENCES [bookings]([booking_id]),
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]),
+    [overall_rating] INT NOT NULL CHECK ([overall_rating] BETWEEN 1 AND 5),
+    [privacy_rating] INT NOT NULL CHECK ([privacy_rating] BETWEEN 1 AND 5),
+    [food_rating] INT NOT NULL CHECK ([food_rating] BETWEEN 1 AND 5),
+    [decor_rating] INT NOT NULL CHECK ([decor_rating] BETWEEN 1 AND 5),
+    [service_rating] INT NOT NULL CHECK ([service_rating] BETWEEN 1 AND 5),
+    [comment] NVARCHAR(MAX) NULL,
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 46. Hình ảnh đính kèm bài đánh giá
+CREATE TABLE [review_photos] (
+    [photo_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [review_id] INT NOT NULL FOREIGN KEY REFERENCES [booking_reviews]([review_id]) ON DELETE CASCADE,
+    [photo_url] NVARCHAR(500) NOT NULL
+);
+
+-- 47. Báo cáo & Khiếu nại dịch vụ không đúng cam kết
+CREATE TABLE [customer_complaints] (
+    [complaint_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [booking_id] INT NOT NULL FOREIGN KEY REFERENCES [bookings]([booking_id]),
+    [user_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]),
+    [complaint_type] VARCHAR(50) NOT NULL, -- WRONG_DECOR, LATE_CAKE, NO_PRIVACY, BAD_SERVICE
+    [content] NVARCHAR(MAX) NOT NULL,
+    [status] NVARCHAR(20) NOT NULL DEFAULT 'OPEN' CHECK ([status] IN ('OPEN', 'INVESTIGATING', 'RESOLVED', 'REJECTED')),
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 48. Đề xuất & Xử lý bồi hoàn dịch vụ
+CREATE TABLE [complaint_compensations] (
+    [compensation_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [complaint_id] INT NOT NULL UNIQUE FOREIGN KEY REFERENCES [customer_complaints]([complaint_id]) ON DELETE CASCADE,
+    [compensation_type] VARCHAR(30) NOT NULL CHECK ([compensation_type] IN ('REFUND_PARTIAL', 'VOUCHER', 'FREE_DECOR_NEXT_TIME')),
+    [amount] DECIMAL(18,2) NULL,
+    [voucher_code] VARCHAR(50) NULL,
+    [resolution_note] NVARCHAR(MAX) NOT NULL,
+    [resolved_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- ============================================================================
+-- PHÂN HỆ 11: NHẬT KÝ THAO TÁC & THỐNG KÊ KINH DOANH (ANALYTICS) - 4 BẢNG
+-- ============================================================================
+
+-- 49. Lịch sử tìm kiếm & Lọc nhà hàng của khách
+CREATE TABLE [user_search_histories] (
+    [search_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] INT NULL FOREIGN KEY REFERENCES [users]([user_id]) ON DELETE SET NULL,
+    [search_keyword] NVARCHAR(255) NULL,
+    [applied_filters_json] NVARCHAR(MAX) NULL, -- Lưu bộ lọc price, privacy, theme...
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 50. Audit Log thao tác nhân viên
+CREATE TABLE [staff_audit_logs] (
+    [log_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [staff_id] INT NOT NULL FOREIGN KEY REFERENCES [users]([user_id]),
+    [action] VARCHAR(50) NOT NULL,
+    [target_table] VARCHAR(50) NOT NULL,
+    [target_id] INT NULL,
+    [description] NVARCHAR(MAX) NULL,
+    [created_at] DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- 51. Thống kê kinh doanh theo nhà hàng & ngày (Hỗ trợ xuất Excel)
+CREATE TABLE [daily_restaurant_analytics] (
+    [stat_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [restaurant_id] INT NOT NULL FOREIGN KEY REFERENCES [restaurants]([restaurant_id]),
+    [stat_date] DATE NOT NULL,
+    [total_bookings] INT DEFAULT 0,
+    [completed_bookings] INT DEFAULT 0,
+    [cancelled_bookings] INT DEFAULT 0,
+    [no_show_bookings] INT DEFAULT 0,
+    [private_room_bookings] INT DEFAULT 0,
+    [total_decor_revenue] DECIMAL(18,2) DEFAULT 0,
+    [total_cake_gift_revenue] DECIMAL(18,2) DEFAULT 0,
+    [total_combo_revenue] DECIMAL(18,2) DEFAULT 0,
+    [total_gross_revenue] DECIMAL(18,2) DEFAULT 0,
+    [avg_spending_per_couple] DECIMAL(18,2) DEFAULT 0,
+    CONSTRAINT [UQ_restaurant_stat_date] UNIQUE([restaurant_id], [stat_date])
+);
+
+-- 52. Thống kê xu hướng chọn chủ đề & Combo hot
+CREATE TABLE [theme_combo_trend_analytics] (
+    [trend_id] INT IDENTITY(1,1) PRIMARY KEY,
+    [stat_month] VARCHAR(7) NOT NULL, -- Format: YYYY-MM
+    [top_theme_id] INT NULL FOREIGN KEY REFERENCES [romantic_themes]([theme_id]),
+    [top_combo_id] INT NULL FOREIGN KEY REFERENCES [couple_combos]([combo_id]),
+    [total_proposals_organized] INT DEFAULT 0,
+    [total_anniversaries_organized] INT DEFAULT 0
+);
+GO
+
+-- ============================================================================
+-- TẠO INDEX TỐI ƯU HIỆU NĂNG TÌM KIẾM BÀN TRỐNG & ĐẶT BÀN (INDEXES)
+-- ============================================================================
+
+-- Tối ưu tra cứu bàn trống theo ngày và khung giờ
+CREATE INDEX IX_table_availability_slot_date ON [table_availability_slots]([booking_date], [status]);
+
+-- Tối ưu lọc nhà hàng theo khu vực và khoảng giá
+CREATE INDEX IX_restaurants_district_price ON [restaurants]([district], [avg_price_per_couple]);
+
+-- Tối ưu tra cứu đơn đặt bàn theo mã booking và trạng thái
+CREATE INDEX IX_bookings_code ON [bookings]([booking_code]);
+CREATE INDEX IX_bookings_user_status ON [bookings]([user_id], [booking_status]);
+GO
+
+USE [RomanticDiningStore];
+GO
+SELECT ROW_NUMBER() OVER (ORDER BY name) AS STT, name AS Ten_Bang
+FROM sys.tables
+WHERE name <> 'sysdiagrams'
+ORDER BY name;
+--r
