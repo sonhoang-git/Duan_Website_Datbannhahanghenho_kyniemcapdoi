@@ -3,19 +3,16 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>com.example</groupId>
     <artifactId>DuAn1</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>DuAn1</name>
     <packaging>war</packaging>
-
     <properties>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <junit.version>5.7.0</junit.version>
     </properties>
-
     <dependencies>
         <dependency>
             <groupId>jakarta.servlet</groupId>
@@ -74,11 +71,19 @@
     </dependencies>
 
     <build>
+        <!-- Thêm finalName để file war xuất ra ngắn gọn là DuAn1.war -->
+        <finalName>DuAn1</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.4.0</version>
+                <configuration>
+                    <!-- Đảm bảo cấu trúc thư mục của bạn có src/main/webapp chứa WEB-INF -->
+                    <warSourceDirectory>src/main/webapp</warSourceDirectory>
+                    <!-- Tùy chọn này giúp bỏ qua lỗi nếu thiếu file web.xml (Servlet 3.0+) -->
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
             </plugin>
         </plugins>
     </build>
