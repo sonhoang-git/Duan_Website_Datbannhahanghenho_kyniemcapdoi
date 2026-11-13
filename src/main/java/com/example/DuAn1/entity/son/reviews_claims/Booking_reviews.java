@@ -1,4 +1,4 @@
-package com.example.DuAn1.entity.reviews_claims;
+package com.example.DuAn1.entity.son.reviews_claims;
 
 
 import jakarta.persistence.*;
@@ -23,28 +23,28 @@ public class Booking_reviews {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "[review_id]")
+    @Column(name = "review_id")
     private Integer review_id;
 
-    @Column(name = "[overall_rating]")
+    @Column(name = "overall_rating")
     private Integer overall_rating;
 
-    @Column(name = "[privacy_rating]")
+    @Column(name = "privacy_rating")
     private Integer privacy_rating;
 
-    @Column(name = "[food_rating]")
+    @Column(name = "food_rating")
     private Integer food_rating;
 
-    @Column(name = "[decor_rating]")
+    @Column(name = "decor_rating")
     private Integer decor_rating;
 
-    @Column(name = "[service_rating]")
+    @Column(name = "service_rating")
     private Integer service_rating;
 
-    @Column(name = "[comment]")
-    private LocalTime comment;
+    @Column(name = "comment")
+    private String comment;
 
-    @Column(name = "[created_at]")
+    @Column(name = "created_at")
     private String created_at;
 
 
