@@ -18,6 +18,7 @@ import lombok.Setter;
 
 public class Cake_catalog {
 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[cake_id]")
     private Integer cake_id;

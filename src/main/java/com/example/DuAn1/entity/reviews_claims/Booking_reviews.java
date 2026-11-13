@@ -21,6 +21,7 @@ import java.time.LocalTime;
 
 public class Booking_reviews {
 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[review_id]")
     private Integer review_id;

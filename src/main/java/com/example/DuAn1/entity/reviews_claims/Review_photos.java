@@ -18,6 +18,7 @@ import lombok.Setter;
 
 public class Review_photos {
 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[photo_id]")
     private Integer photo_id;

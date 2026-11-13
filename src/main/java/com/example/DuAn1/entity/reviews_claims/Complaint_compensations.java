@@ -20,6 +20,7 @@ import java.time.LocalTime;
 
 
 public class Complaint_compensations {
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[compensation_id]")
     private Integer compensation_id;

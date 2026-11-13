@@ -20,6 +20,7 @@ import java.time.LocalTime;
 
 public class Booking_gift_orders {
 
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[gift_order_id]")
     private Integer gift_order_id;

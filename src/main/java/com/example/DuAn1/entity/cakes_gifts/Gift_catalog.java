@@ -19,6 +19,7 @@ import java.time.LocalTime;
 ///-- 24. Danh mục Hoa tươi & Quà tặng
 
 public class Gift_catalog {
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[gift_id]")
     private Integer gift_id;
