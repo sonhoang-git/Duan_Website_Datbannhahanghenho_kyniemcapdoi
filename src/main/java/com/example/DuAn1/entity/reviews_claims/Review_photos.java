@@ -1,6 +1,7 @@
 package com.example.DuAn1.entity.reviews_claims;
 
 
+import com.example.DuAn1.entity.son.reviews_claims.Booking_reviews;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

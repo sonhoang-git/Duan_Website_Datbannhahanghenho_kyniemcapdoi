@@ -1,6 +1,7 @@
 package com.example.DuAn1.Hibernate;
 
-import com.example.DuAn1.entity.linh.use_anniversary.Users;
+
+import com.example.DuAn1.entity.reviews_claims.Review_photos;
 import com.example.DuAn1.entity.son.cakes_gifts.Booking_cake_orders;
 import com.example.DuAn1.entity.son.cakes_gifts.Booking_gift_orders;
 import com.example.DuAn1.entity.son.cakes_gifts.Cake_catalog;
@@ -8,7 +9,7 @@ import com.example.DuAn1.entity.son.cakes_gifts.Gift_catalog;
 import com.example.DuAn1.entity.son.reviews_claims.Booking_reviews;
 import com.example.DuAn1.entity.son.reviews_claims.Complaint_compensations;
 import com.example.DuAn1.entity.son.reviews_claims.Customer_complaints;
-import com.example.DuAn1.entity.son.reviews_claims.Review_photos;
+
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
@@ -28,7 +29,7 @@ public class HibernateUtils {
         properties.put(Environment.DRIVER, "com.microsoft.sqlserver.jdbc.SQLServerDriver");
         properties.put(Environment.URL, "jdbc:sqlserver://localhost:1433;databaseName=RomanticDiningStore;encrypt=true;trustServerCertificate=true;");
         properties.put(Environment.USER, "sa");
-        properties.put(Environment.PASS, "123");
+        properties.put(Environment.PASS, "123456");
         properties.put(Environment.SHOW_SQL, "true");
 
         conf.setProperties(properties);
@@ -42,7 +43,7 @@ public class HibernateUtils {
         conf.addAnnotatedClass(Gift_catalog.class);
 
         //Linh
-        conf.addAnnotatedClass(Users.class);
+       // conf.addAnnotatedClass(Users.class);
 
         ServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(conf.getProperties()).build();
