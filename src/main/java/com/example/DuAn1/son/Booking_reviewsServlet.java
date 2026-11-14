@@ -1,7 +1,7 @@
-package com.example.DuAn1.controller.son.reviews_gifts;
+package com.example.DuAn1.son;
 
-import com.example.DuAn1.entity.son.reviews_claims.Booking_reviews;
-import com.example.DuAn1.repository.son.reviews_claims.Booking_reviewsRepository;
+import com.example.DuAn1.entity.reviews_claims.Booking_reviews;
+import com.example.DuAn1.son.repository.Booking_reviewsRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;

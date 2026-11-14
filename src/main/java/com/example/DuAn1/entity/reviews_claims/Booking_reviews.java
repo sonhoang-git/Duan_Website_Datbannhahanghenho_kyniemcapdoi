@@ -1,4 +1,4 @@
-package com.example.DuAn1.entity.son.reviews_claims;
+package com.example.DuAn1.entity.reviews_claims;
 
 
 import jakarta.persistence.*;

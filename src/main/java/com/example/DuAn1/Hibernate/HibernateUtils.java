@@ -1,14 +1,14 @@
 package com.example.DuAn1.Hibernate;
 
-import com.example.DuAn1.entity.linh.use_anniversary.Users;
-import com.example.DuAn1.entity.son.cakes_gifts.Booking_cake_orders;
-import com.example.DuAn1.entity.son.cakes_gifts.Booking_gift_orders;
-import com.example.DuAn1.entity.son.cakes_gifts.Cake_catalog;
-import com.example.DuAn1.entity.son.cakes_gifts.Gift_catalog;
-import com.example.DuAn1.entity.son.reviews_claims.Booking_reviews;
-import com.example.DuAn1.entity.son.reviews_claims.Complaint_compensations;
-import com.example.DuAn1.entity.son.reviews_claims.Customer_complaints;
-import com.example.DuAn1.entity.son.reviews_claims.Review_photos;
+
+import com.example.DuAn1.entity.cakes_gifts.Booking_cake_orders;
+import com.example.DuAn1.entity.cakes_gifts.Booking_gift_orders;
+import com.example.DuAn1.entity.cakes_gifts.Cake_catalog;
+import com.example.DuAn1.entity.cakes_gifts.Gift_catalog;
+import com.example.DuAn1.entity.reviews_claims.Booking_reviews;
+import com.example.DuAn1.entity.reviews_claims.Complaint_compensations;
+import com.example.DuAn1.entity.reviews_claims.Customer_complaints;
+import com.example.DuAn1.entity.reviews_claims.Review_photos;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
@@ -40,9 +40,6 @@ public class HibernateUtils {
         conf.addAnnotatedClass(Booking_gift_orders.class);
         conf.addAnnotatedClass(Cake_catalog.class);
         conf.addAnnotatedClass(Gift_catalog.class);
-
-        //Linh
-        conf.addAnnotatedClass(Users.class);
 
         ServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(conf.getProperties()).build();

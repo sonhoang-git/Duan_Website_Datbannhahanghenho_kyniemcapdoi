@@ -1,4 +1,4 @@
-package com.example.DuAn1.entity.son.cakes_gifts;
+package com.example.DuAn1.entity.cakes_gifts;
 
 
 import jakarta.persistence.*;
