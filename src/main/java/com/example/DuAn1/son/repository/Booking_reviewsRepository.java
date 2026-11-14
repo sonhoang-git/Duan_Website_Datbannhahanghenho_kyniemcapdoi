@@ -1,7 +1,7 @@
-package com.example.DuAn1.repository.son.reviews_claims;
+package com.example.DuAn1.son.repository;
 
 import com.example.DuAn1.Hibernate.HibernateUtils;
-import com.example.DuAn1.entity.son.reviews_claims.Booking_reviews;
+import com.example.DuAn1.entity.reviews_claims.Booking_reviews;
 import org.hibernate.Session;
 
 import java.util.List;
