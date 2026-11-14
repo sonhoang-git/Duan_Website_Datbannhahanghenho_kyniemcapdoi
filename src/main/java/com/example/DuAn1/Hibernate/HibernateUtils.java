@@ -42,7 +42,7 @@ public class HibernateUtils {
         conf.addAnnotatedClass(Gift_catalog.class);
 
         //Linh
-        conf.addAnnotatedClass(Users.class);
+        //conf.addAnnotatedClass(Users.class);
 
         ServiceRegistry registry = new StandardServiceRegistryBuilder()
                 .applySettings(conf.getProperties()).build();
