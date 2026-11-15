@@ -2,7 +2,7 @@ package com.example.DuAn1.entity.restaurant_master;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -24,7 +24,7 @@ public class RestaurantServiceFee {
     private String feeName;
 
     @Column(name = "amount", nullable = false)
-    private BigDecimal amount;
+    private Float amount;
 
     @Column(name = "is_percentage", nullable = false)
     private Boolean isPercentage;

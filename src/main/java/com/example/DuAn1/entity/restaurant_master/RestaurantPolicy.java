@@ -2,7 +2,6 @@ package com.example.DuAn1.entity.restaurant_master;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -24,10 +23,10 @@ public class RestaurantPolicy {
     private Integer cancellationLeadHours;
 
     @Column(name = "refund_percentage", nullable = false)
-    private BigDecimal refundPercentage;
+    private Float refundPercentage;
 
     @Column(name = "deposit_requirement_percent", nullable = false)
-    private BigDecimal depositRequirementPercent;
+    private Float depositRequirementPercent;
 
     @Column(name = "max_hold_time_minutes")
     private Integer maxHoldTimeMinutes;

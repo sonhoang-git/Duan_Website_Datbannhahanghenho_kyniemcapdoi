@@ -2,7 +2,6 @@ package com.example.DuAn1.entity.restaurant_master;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -36,19 +35,19 @@ public class Restaurant {
     private String city;
 
     @Column(name = "latitude")
-    private BigDecimal latitude;
+    private Float latitude;
 
     @Column(name = "longitude")
-    private BigDecimal longitude;
+    private Float longitude;
 
     @Column(name = "cuisine_type", nullable = false)
     private String cuisineType;
 
     @Column(name = "avg_price_per_couple", nullable = false)
-    private BigDecimal avgPricePerCouple;
+    private Float avgPricePerCouple;
 
     @Column(name = "romantic_rating")
-    private BigDecimal romanticRating;
+    private Float romanticRating;
 
     @Column(name = "status", nullable = false)
     private String status;
