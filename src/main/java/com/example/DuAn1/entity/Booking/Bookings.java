@@ -1,6 +1,6 @@
 package com.example.DuAn1.entity.Booking;
 
-import com.example.DuAn1.entity.restaurant_space.Restaurant;
+import com.example.DuAn1.entity.restaurant_space.Restaurants;
 import com.example.DuAn1.entity.restaurant_space.Tables;
 import com.example.DuAn1.entity.restaurant_space.Time_slots;
 import jakarta.persistence.*;
@@ -57,7 +57,7 @@ public class Bookings {
 
     @ManyToOne
     @JoinColumn(name = "[restaurant_id]", referencedColumnName = "[restaurant_id]")
-    private Restaurant restaurants;
+    private Restaurants restaurants;
 
     @ManyToOne
     @JoinColumn(name = "[table_id]", referencedColumnName = "[table_id]")

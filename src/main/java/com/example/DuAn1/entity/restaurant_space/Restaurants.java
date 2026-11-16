@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Entity
 @Table(name = "[restaurants]")
-public class Restaurant {
+public class Restaurants {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "[restaurant_id]")

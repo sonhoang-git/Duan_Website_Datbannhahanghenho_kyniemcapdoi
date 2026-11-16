@@ -35,5 +35,5 @@ public class Time_slots {
 
     @ManyToOne
     @JoinColumn(name = "[restaurant_id]", referencedColumnName = "[restaurant_id]")
-    private Restaurant restaurants;
+    private Restaurants restaurants;
 }

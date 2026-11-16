@@ -29,5 +29,5 @@ public class Restaurant_areas {
 
     @ManyToOne
     @JoinColumn(name = "[restaurant_id]", referencedColumnName = "[restaurant_id]")
-    private Restaurant restaurants;
+    private Restaurants restaurants;
 }
