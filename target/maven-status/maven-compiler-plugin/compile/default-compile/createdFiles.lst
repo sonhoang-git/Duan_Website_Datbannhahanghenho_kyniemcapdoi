@@ -1,0 +1,3 @@
+Services\RestaurantService.class
+Entity\Restaurant.class
+Services\ConnectServices.class
